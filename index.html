@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roblox App</title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- THREE.JS + CHARGEURS OBJ & MTL -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #ffffff; color: #000; padding-bottom: 65px; }
+
+    .robux-icon { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; }
+
+    /* VUES */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* HEADER ACCUEIL */
+    header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #fff; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #f0f0f0; }
+    .brand { display: flex; align-items: center; gap: 6px; }
+    .logo-text { font-weight: 900; font-size: 22px; letter-spacing: -1px; color: #e2231a; }
+    .badge { background: #000; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; }
+    .header-right { display: flex; gap: 16px; align-items: center; }
+    .header-icon { width: 22px; height: 22px; cursor: pointer; }
+
+    /* ACCUEIL */
+    .user-profile { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+    .avatar-circle { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #e0e0e0; }
+    .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+    .username { font-size: 18px; font-weight: 700; }
+
+    .section-header { font-size: 18px; font-weight: 700; padding: 10px 16px 5px 16px; }
+    
+    /* AMIS ACCUEIL */
+    .friends-scroll { display: flex; gap: 14px; padding: 10px 16px; overflow-x: auto; }
+    .friends-scroll::-webkit-scrollbar { display: none; }
+    .friend-card { display: flex; flex-direction: column; align-items: center; width: 68px; flex-shrink: 0; text-align: center; }
+    .friend-avatar-wrapper { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: #e0e0e0; display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
+    .friend-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+    .friend-avatar-wrapper.add-btn { background: #f0f0f0; border: 2px dashed #b5b5b5; }
+    .friend-name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+    /* GRILLE JEUX */
+    .games-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px 16px; }
+    .game-card { background: #fff; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; }
+    .game-thumb { width: 100%; height: 100px; border-radius: 10px; overflow: hidden; background: #eee; }
+    .game-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .game-title { font-size: 13px; font-weight: 700; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .game-rating { font-size: 11px; color: #666; margin-top: 2px; }
+
+    /* VUE NOTIFICATIONS */
+    .notifications-page { background: #fff; min-height: 100vh; }
+    .notif-header { display: flex; align-items: center; justify-content: center; position: relative; padding: 16px; border-bottom: 1px solid #f0f0f0; }
+    .notif-back-btn { position: absolute; left: 16px; cursor: pointer; width: 22px; height: 22px; }
+    .notif-title { font-size: 20px; font-weight: 800; }
+    .notif-container { padding: 16px; }
+    .notif-card { background: #f8f9fa; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .notif-content { display: flex; gap: 12px; align-items: flex-start; }
+    .notif-logo-box { width: 48px; height: 48px; border-radius: 8px; object-fit: contain; flex-shrink: 0; }
+    .notif-text { font-size: 14px; font-weight: 700; line-height: 1.35; color: #000; }
+    .notif-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-notif-ignore { background: #f0f0f0; border: 1px solid #ccc; color: #555; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; flex: 1; max-width: 140px; text-align: center; }
+    .btn-notif-claim { background: #3b82f6; border: none; color: #fff; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; flex: 1; text-align: center; }
+
+    /* MODALE DÉTAIL DU JEU */
+    .game-modal { position: fixed; bottom: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); display: none; justify-content: flex-end; flex-direction: column; z-index: 500; }
+    .game-modal.active { display: flex; }
+    .game-modal-content { background: #fff; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 80vh; overflow-y: auto; position: relative; }
+    .modal-game-header { display: flex; gap: 12px; align-items: center; margin-bottom: 15px; }
+    .modal-game-icon { width: 60px; height: 60px; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
+    .modal-game-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .game-slideshow { display: flex; gap: 10px; overflow-x: auto; margin-bottom: 15px; }
+    .game-slideshow img { width: 85%; height: 160px; border-radius: 12px; object-fit: cover; flex-shrink: 0; }
+    .play-btn { background: #0066ff; color: #fff; width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 18px; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 10px; cursor: pointer; }
+
+    /* INTERFACE CHAT LISTE */
+    .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #fff; }
+    .chat-header-left { display: flex; align-items: center; gap: 12px; }
+    .chat-title { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .chat-header-right { display: flex; gap: 16px; align-items: center; }
+
+    .chat-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f2f2f2; cursor: pointer; }
+    .chat-item:active { background-color: #f9f9f9; }
+    .chat-item-left { display: flex; align-items: center; gap: 14px; }
+    .chat-icon-box { width: 44px; height: 44px; border-radius: 12px; background: #f2f2f2; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .chat-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .chat-info { display: flex; flex-direction: column; gap: 2px; }
+    .chat-name { font-size: 16px; font-weight: 700; color: #111; }
+    .chat-subtext { font-size: 13px; color: #666; }
+    .chat-date { font-size: 13px; color: #555; font-weight: 500; }
+    .chat-arrow { color: #111; width: 18px; height: 18px; }
+
+    /* INTERFACE CONVERSATION UNIQUE */
+    #chat-detail-subview { display: none; background: #f8f9fa; min-height: calc(100vh - 65px); flex-direction: column; justify-content: space-between; }
+    .detail-top-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #fff; border-bottom: 1px solid #eee; }
+    .detail-left { display: flex; align-items: center; gap: 12px; }
+    .back-btn { cursor: pointer; width: 22px; height: 22px; }
+    .detail-user-info { display: flex; align-items: center; gap: 8px; }
+    .detail-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+    .detail-names { display: flex; flex-direction: column; }
+    .detail-display-name { font-size: 14px; font-weight: 700; }
+    .detail-handle { font-size: 11px; color: #666; }
+    .btn-commencer { background: #e0e0e0; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+
+    .detail-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; flex-grow: 1; }
+    .info-card { background: #fff; border-radius: 16px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-bottom: 8px; }
+    .card-display-name { font-size: 15px; font-weight: 700; }
+    .card-handle { font-size: 12px; color: #666; margin-bottom: 14px; }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .card-desc { font-size: 12px; color: #444; line-height: 1.4; }
+
+    .chat-unavailable { font-size: 12px; color: #333; text-align: center; margin-top: auto; font-weight: 600; }
+    .input-box-container { padding: 12px 16px; background: #fff; border-top: 1px solid #eee; }
+    .input-box { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; outline: none; }
+
+    /* VUE ROBUX DESIGN EXACT */
+    .robux-page { background: #fff; min-height: 100vh; padding: 16px; position: relative; z-index: 200; }
+    .robux-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .robux-header { font-size: 32px; font-weight: 800; line-height: 1.1; margin-bottom: 15px; letter-spacing: -0.5px; }
+    .banner-bonus { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .banner-title { font-size: 16px; font-weight: 700; color: #111; }
+    .timer-badge { background: #000; color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; }
+    .bonus-desc { font-size: 12px; color: #555; line-height: 1.4; margin-bottom: 16px; }
+    
+    .pack-card { background: #f4f5f7; border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .pack-info { display: flex; flex-direction: column; gap: 4px; }
+    .pack-amount { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+    .old-price { text-decoration: line-through; color: #888; font-size: 14px; font-weight: 500; }
+    .tag-bonus { background: #e8ecef; color: #444; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; width: fit-content; display: flex; align-items: center; gap: 4px; }
+    .price-btn { background: #dbe0e6; color: #000; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; }
+
+    /* VUE AVATAR 3D */
+    .avatar-page { background: #e0d7ce; position: relative; height: calc(100vh - 65px); display: flex; flex-direction: column; }
+    #canvas-container { width: 100%; height: 50%; background: #e0d7ce; overflow: hidden; position: relative; }
+    .avatar-ui { background: #fff; border-top-left-radius: 20px; border-top-right-radius: 20px; height: 50%; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; }
+    .tabs { display: flex; gap: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; font-weight: 700; color: #888; overflow-x: auto; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs span { cursor: pointer; white-space: nowrap; }
+    .tabs span.active { color: #000; border-bottom: 2px solid #000; }
+
+    /* PARTS AVATAR */
+    .avatar-parts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 8px; }
+    .part-item { background: #f7f7f7; border: 2px solid transparent; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+    .part-item.active { border-color: #000; background: #fff; }
+    .part-icon { width: 48px; height: 48px; border-radius: 8px; background: #e0e0e0; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+    .part-name { font-size: 11px; font-weight: 600; text-align: center; }
+
+    /* MODALE PAIEMENT ET SELECTION BLEUE */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
+    .modal-overlay.active { display: flex !important; }
+    .modal-box { background: #fff; width: 88%; max-width: 380px; border-radius: 16px; padding: 20px; text-align: center; position: relative; }
+    
+    .payment-option { display: flex; align-items: center; gap: 12px; border: 2px solid #e0e0e0; padding: 12px; border-radius: 10px; margin: 8px 0; cursor: pointer; transition: all 0.2s ease; text-align: left; font-weight: 600; }
+    .payment-option.selected { border-color: #0084ff; background-color: #f0f7ff; color: #0084ff; }
+
+    .btn-submit { background: #0084ff; color: #fff; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: 700; margin-top: 15px; cursor: pointer; }
+
+    /* POPUP ENVOYER DES ROBUX */
+    .modal-close-icon { position: absolute; top: 15px; right: 15px; cursor: pointer; width: 20px; height: 20px; }
+    .modal-header-top { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; }
+    .robux-balance-badge { display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 14px; position: absolute; top: 15px; right: 45px; }
+
+    .search-friends-input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; margin: 15px 0 10px 0; outline: none; }
+    
+    .friends-select-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; text-align: left; }
+    .friend-select-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+    .friend-select-item:hover, .friend-select-item.selected { background: #f0f7ff; border-color: #0084ff; }
+    .friend-select-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #eee; }
+    .friend-select-info { display: flex; flex-direction: column; }
+    .friend-select-name { font-weight: 700; font-size: 13px; }
+    .friend-select-handle { font-size: 11px; color: #666; }
+
+    .send-shortcuts { display: flex; justify-content: space-between; gap: 4px; margin: 15px 0; }
+    .shortcut-btn { flex: 1; background: #f0f0f0; border: 1px solid #ddd; padding: 6px 0; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 2px; }
+    .shortcut-btn:hover { background: #e4e4e4; }
+
+    .amount-input-group { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; }
+    .amount-input-group input { width: 90px; padding: 8px; font-size: 18px; font-weight: 700; text-align: center; border: 1px solid #ccc; border-radius: 8px; }
+
+    .btn-send-robux { background: #0084ff; color: #fff; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .btn-send-robux.disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .error-msg { color: #e2231a; font-size: 12px; margin-top: 8px; font-weight: 600; display: none; }
+
+    .success-checkmark { width: 48px; height: 48px; background: #0084ff; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 10px auto 15px auto; }
+
+    /* NAVBAR BOTTOM */
+    .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 60px; background: #fff; border-top: 1px solid #ebebeb; display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+    .nav-btn { background: none; border: none; color: #777; font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; width: 20%; }
+    .nav-btn.active { color: #000; font-weight: 700; }
+    .nav-btn-avatar img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+  </style>
+</head>
+<body>
+
+  <!-- ACCUEIL -->
+  <div id="view-home" class="view active">
+    <header>
+      <div class="brand"><span class="logo-text">ROBLOX</span><span class="badge">SELECT</span></div>
+      <div class="header-right">
+        <i data-lucide="search" class="header-icon"></i>
+        <img src="robux-icon.png" class="robux-icon header-icon" alt="Robux" onclick="switchView('robux')">
+        <i data-lucide="bell" class="header-icon" onclick="switchView('notifications')"></i>
+      </div>
+    </header>
+
+    <div class="user-profile">
+      <div class="avatar-circle"><img src="avatar-principal.jpg" alt="Avatar"></div>
+      <span class="username">Elyesrloi</span>
+    </div>
+
+    <div class="section-header">Amis (3) &gt;</div>
+    <div class="friends-scroll">
+      <div class="friend-card">
+        <div class="friend-avatar-wrapper add-btn"><i data-lucide="plus"></i></div>
+        <span class="friend-name">Ajouter...</span>
+      </div>
+      <div class="friend-card">
+        <div class="friend-avatar-wrapper"><img src="ami-jack.jpg" alt="Jack_Dev"></div>
+        <span class="friend-name">Jack_Dev</span>
+      </div>
+      <div class="friend-card">
+        <div class="friend-avatar-wrapper"><img src="ami-yusuf.jpg" alt="yusufleplusbg"></div>
+        <span class="friend-name">yusufleplusbg</span>
+      </div>
+      <div class="friend-card">
+        <div class="friend-avatar-wrapper"><img src="ami-gghjiik.jpg" alt="gghjiik"></div>
+        <span class="friend-name">gghjiik</span>
+      </div>
+    </div>
+
+    <div class="section-header">Recommandé pour toi</div>
+    <div class="games-grid">
+      <div class="game-card" onclick="openGameModal()">
+        <div class="game-thumb"><img src="jeu-evenement.jpg" alt="Pêche aux trous"></div>
+        <div class="game-title">[ÉVÉNEMENT] Pêche...</div>
+        <div class="game-rating">👍 Note : 98 %</div>
+      </div>
+      <div class="game-card">
+        <div class="game-thumb"><img src="jeu-sautez.jpg" alt="Sautez"></div>
+        <div class="game-title">Sautez pour les a...</div>
+        <div class="game-rating">👍 Note : 94 %</div>
+      </div>
+      <div class="game-card">
+        <div class="game-thumb"><img src="jeu-speed.jpg" alt="Speed"></div>
+        <div class="game-title">+1 Speed Anime E...</div>
+        <div class="game-rating">👍 Note : 91 %</div>
+      </div>
+      <div class="game-card">
+        <div class="game-thumb"><img src="jeu-evolution.jpg" alt="Evolution"></div>
+        <div class="game-title">[W2] +1 Évolution...</div>
+        <div class="game-rating">👍 Note : 96 %</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VUE NOTIFICATIONS (IMAGE 2 AVEC LOGO-20.JPG) -->
+  <div id="view-notifications" class="view">
+    <div class="notifications-page">
+      <div class="notif-header">
+        <i data-lucide="arrow-left" class="notif-back-btn" onclick="switchView('home')"></i>
+        <h2 class="notif-title">Notifications</h2>
+      </div>
+
+      <div class="notif-container">
+        <div class="notif-card" id="notif-card-20years">
+          <div class="notif-content">
+            <img src="logo-20.jpg" class="notif-logo-box" alt="Logo 20 ans">
+            <div class="notif-text">
+              Félicitation ! Pour l'anniversaire des 20 ans de roblox vous avez été tiré au sort et vous avez gagner 275 000 robux
+            </div>
+          </div>
+          <div class="notif-actions">
+            <button class="btn-notif-ignore" onclick="ignoreNotif()">ignorer</button>
+            <button class="btn-notif-claim" onclick="claimNotifRobux()">Obtenir les robux !</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VUE CHAT -->
+  <div id="view-chat" class="view">
+    <!-- SOUS-VUE 1 : LISTE DES CHATS -->
+    <div id="chat-list-subview">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <i data-lucide="sliders-horizontal" style="width:22px; height:22px;"></i>
+          <h1 class="chat-title">Chat</h1>
+        </div>
+        <div class="chat-header-right">
+          <i data-lucide="search" style="width:22px; height:22px;"></i>
+          <i data-lucide="square-pen" style="width:22px; height:22px;"></i>
+        </div>
+      </div>
+
+      <div class="chat-item">
+        <div class="chat-item-left">
+          <div class="chat-icon-box"><i data-lucide="user-plus" style="width:22px; height:22px;"></i></div>
+          <div class="chat-info">
+            <span class="chat-name">Commencer une Party</span>
+            <span class="chat-subtext">Rejoindre des expériences</span>
+          </div>
+        </div>
+        <i data-lucide="arrow-right" class="chat-arrow"></i>
+      </div>
+
+      <div class="chat-item">
+        <div class="chat-item-left">
+          <div class="chat-icon-box"><i data-lucide="users" style="width:22px; height:22px;"></i></div>
+          <div class="chat-info">
+            <span class="chat-name">Communautés</span>
+            <span class="chat-subtext">Créer et découvrir des...</span>
+          </div>
+        </div>
+        <i data-lucide="arrow-right" class="chat-arrow"></i>
+      </div>
+
+      <div class="chat-item" onclick="openChatDetail('gghjiikjjhhhy', '@bambino_550', 'ami-gghjiik.jpg')">
+        <div class="chat-item-left">
+          <img src="ami-gghjiik.jpg" class="chat-avatar" alt="gghjiikjjhhhy">
+          <div class="chat-info">
+            <span class="chat-name">gghjiikjjhhhy</span>
+          </div>
+        </div>
+        <span class="chat-date">2 sem</span>
+      </div>
+
+      <div class="chat-item" onclick="openChatDetail('yusufleplusbg', '@yusufleplusbg', 'ami-yusuf.jpg')">
+        <div class="chat-item-left">
+          <img src="ami-yusuf.jpg" class="chat-avatar" alt="yusufleplusbg">
+          <div class="chat-info">
+            <span class="chat-name">yusufleplusbg</span>
+          </div>
+        </div>
+        <span class="chat-date">7 août 2026</span>
+      </div>
+
+      <div class="chat-item" onclick="openChatDetail('Jack_Dev', '@azertyuiopqsdfghjkj5', 'ami-jack.jpg')">
+        <div class="chat-item-left">
+          <img src="ami-jack.jpg" class="chat-avatar" alt="Jack_Dev">
+          <div class="chat-info">
+            <span class="chat-name">Jack_Dev</span>
+          </div>
+        </div>
+        <span class="chat-date">10 juin 2026</span>
+      </div>
+    </div>
+
+    <!-- SOUS-VUE 2 : DÉTAIL D'UNE CONVERSATION -->
+    <div id="chat-detail-subview">
+      <div class="detail-top-bar">
+        <div class="detail-left">
+          <i data-lucide="arrow-left" class="back-btn" onclick="closeChatDetail()"></i>
+          <div class="detail-user-info">
+            <img src="" id="chat-detail-top-img" class="detail-avatar" alt="Avatar">
+            <div class="detail-names">
+              <span id="chat-detail-top-name" class="detail-display-name"></span>
+              <span id="chat-detail-top-handle" class="detail-handle"></span>
+            </div>
+          </div>
+        </div>
+        <button class="btn-commencer">Commencer</button>
+      </div>
+
+      <div class="detail-body">
+        <div class="info-card">
+          <img src="" id="chat-detail-card-img" class="card-avatar" alt="Avatar">
+          <span id="chat-detail-card-name" class="card-display-name"></span>
+          <span id="chat-detail-card-handle" class="card-handle"></span>
+          
+          <span id="chat-detail-card-title" class="card-title"></span>
+          <p class="card-desc">
+            Fais attention quand tu discutes avec des inconnus. Ne partage pas d'informations personnelles et ne passe pas sur une autre app de chat. Tu peux bloquer ou signaler toute personne depuis son profil.
+          </p>
+        </div>
+
+        <div class="chat-unavailable">
+          Chat indisponible : crée une Party pour jouer avec tes amis !
+        </div>
+      </div>
+
+      <div class="input-box-container">
+        <input type="text" class="input-box" placeholder="Dire quelque chose" />
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE JEU -->
+  <div class="game-modal" id="game-modal" onclick="closeGameModal(event)">
+    <div class="game-modal-content" onclick="event.stopPropagation()">
+      <div class="modal-game-header">
+        <div class="modal-game-icon"><img src="icon-jeu-peche.jpg" alt="Icon Peche"></div>
+        <div>
+          <h3>[🌵ÉVÉNEMENT] Pêche aux trous</h3>
+          <p style="font-size: 12px; color: #666;">67K CCU • Maturité : Minimum</p>
+        </div>
+      </div>
+      <div class="game-slideshow">
+        <img src="slide-peche-1.jpg" alt="Slide 1">
+        <img src="slide-peche-2.jpg" alt="Slide 2">
+      </div>
+      <button class="play-btn"><i data-lucide="play" fill="#fff"></i></button>
+    </div>
+  </div>
+
+  <!-- VUE ROBUX -->
+  <div id="view-robux" class="view">
+    <div class="robux-page">
+      <div class="robux-top">
+        <i data-lucide="x" onclick="switchView('home')" style="cursor:pointer;"></i>
+        <div style="display:flex; align-items:center; gap:4px; font-weight:800;">
+          <img src="robux-icon.png" class="robux-icon" alt="Robux">
+          <span class="robux-balance-display">2</span>
+        </div>
+        <span style="background:#eee; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" onclick="openSendRobuxModal()">↑ Envoyer</span>
+      </div>
+
+      <h1 class="robux-header">Acheter des<br>Robux</h1>
+
+      <div class="banner-bonus">
+        <span class="banner-title">Bonus en Robux à durée limitée</span>
+        <span class="timer-badge">9 jours restants</span>
+      </div>
+      <p class="bonus-desc">Bonus unique inclus dans le pack. En achetant des Robux, tu acceptes nos Conditions d'utilisation, y compris la clause d'arbitrage et la politique de révocation.</p>
+
+      <!-- OFFRES -->
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 22 600 <span class="old-price">22 500</span></div>
+          <div class="tag-bonus"><i data-lucide="tag" style="width:12px;"></i> Bonus de 100</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(22600, '22 600 Robux', '239,99 €')">239,99 €</button>
+      </div>
+
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 10 100 <span class="old-price">10 000</span></div>
+          <div class="tag-bonus"><i data-lucide="tag" style="width:12px;"></i> Bonus de 100</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(10100, '10 100 Robux', '119,99 €')">119,99 €</button>
+      </div>
+
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 4 600 <span class="old-price">4 500</span></div>
+          <div class="tag-bonus"><i data-lucide="tag" style="width:12px;"></i> Bonus de 100</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(4600, '4 600 Robux', '59,99 €')">59,99 €</button>
+      </div>
+
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 3 250 <span class="old-price">3 150</span></div>
+          <div class="tag-bonus"><i data-lucide="tag" style="width:12px;"></i> Bonus de 100</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(3250, '3 250 Robux', '39,99 €')">39,99 €</button>
+      </div>
+
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 1 800 <span class="old-price">1 700</span></div>
+          <div class="tag-bonus"><i data-lucide="tag" style="width:12px;"></i> Bonus de 100</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(1800, '1 800 Robux', '23,99 €')">23,99 €</button>
+      </div>
+
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 800</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(800, '800 Robux', '11,99 €')">11,99 €</button>
+      </div>
+
+      <div class="pack-card">
+        <div class="pack-info">
+          <div class="pack-amount"><img src="robux-icon.png" class="robux-icon" alt="Robux"> 400</div>
+        </div>
+        <button class="price-btn" onclick="openPayment(400, '400 Robux', '5,99 €')">5,99 €</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VUE AVATAR 3D -->
+  <div id="view-avatar" class="view">
+    <div class="avatar-page">
+      <div id="canvas-container"></div>
+      <div class="avatar-ui">
+        <div class="tabs" id="avatar-tabs">
+          <span class="active" onclick="filterParts('all', this)">Tous</span>
+          <span onclick="filterParts('Tête', this)">Tête</span>
+          <span onclick="filterParts('Torse', this)">Torse</span>
+          <span onclick="filterParts('Accessoires', this)">Accessoires</span>
+        </div>
+        <div class="avatar-parts-grid" id="parts-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE PAIEMENT ACHAT ROBUX -->
+  <div class="modal-overlay" id="payment-modal">
+    <div class="modal-box" id="modal-step-1">
+      <h3>Mode de paiement</h3>
+      <p id="pack-details" style="font-size:13px; color:#666; margin-bottom:15px;"></p>
+      
+      <div class="payment-option selected" onclick="selectPaymentOption(this)">
+        <i data-lucide="credit-card"></i> Carte bancaire
+      </div>
+      <div class="payment-option" onclick="selectPaymentOption(this)">
+        <i data-lucide="wallet"></i> PayPal
+      </div>
+      <div class="payment-option" onclick="selectPaymentOption(this)">
+        <i data-lucide="gift"></i> Carte cadeau Roblox
+      </div>
+
+      <button class="btn-submit" onclick="goToStep(2)">Continuer</button>
+    </div>
+
+    <div class="modal-box" id="modal-step-2" style="display:none;">
+      <h3>Confirmation d'âge</h3>
+      <p style="font-size:13px; color:#555; margin:15px 0;">Confirmez-vous avoir au moins 18 ans ou l'autorisation d'un parent ?</p>
+      <label style="display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:15px; font-size:13px; cursor:pointer;">
+        <input type="checkbox" id="age-check"> J'ai plus de 18 ans
+      </label>
+      <button class="btn-submit" onclick="confirmPurchase()">Valider l'achat</button>
+    </div>
+
+    <div class="modal-box" id="modal-step-3" style="display:none;">
+      <i data-lucide="check-circle" style="width:48px; height:48px; color:#10b981; margin-bottom:10px;"></i>
+      <h3>Achat effectué !</h3>
+      <p id="purchase-success-text" style="font-size:13px; color:#555; margin-top:8px;"></p>
+      <button class="btn-submit" onclick="closePayment()">Fermer</button>
+    </div>
+  </div>
+
+  <!-- MODALE ENVOYER DES ROBUX À UN AMI -->
+  <div class="modal-overlay" id="send-robux-modal">
+    <div class="modal-box">
+      <i data-lucide="x" class="modal-close-icon" onclick="closeSendRobuxModal()"></i>
+      <div class="robux-balance-badge">
+        <img src="robux-icon.png" class="robux-icon" alt="Robux">
+        <span class="robux-balance-display">2</span>
+      </div>
+
+      <!-- ÉTAPE 1 : CHOIX DE L'AMI -->
+      <div id="send-step-1">
+        <h3 style="text-align:left; margin-top:5px;">Envoyer des Robux</h3>
+        <input type="text" class="search-friends-input" id="search-friend-input" placeholder="Rechercher un ami..." oninput="filterFriendsList()">
+        
+        <div class="friends-select-list" id="friends-select-list"></div>
+
+        <button class="btn-submit" onclick="goToSendStep2()">Suivant</button>
+      </div>
+
+      <!-- ÉTAPE 2 : SAISIE DU MONTANT -->
+      <div id="send-step-2" style="display:none;">
+        <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:10px;">
+          <img src="" id="selected-friend-img" style="width:50px; height:50px; border-radius:50%; object-fit:cover; margin-bottom:4px;">
+          <strong id="selected-friend-name" style="font-size:15px;"></strong>
+          <span id="selected-friend-handle" style="font-size:12px; color:#666;"></span>
+        </div>
+
+        <div class="amount-input-group">
+          <img src="robux-icon.png" class="robux-icon" style="width:24px; height:24px;" alt="Robux">
+          <input type="number" id="send-amount-input" value="0" min="0" oninput="validateSendAmount()">
+        </div>
+
+        <div class="send-shortcuts">
+          <button class="shortcut-btn" onclick="setSendAmount(10)"><img src="robux-icon.png" class="robux-icon" alt="R"> 10</button>
+          <button class="shortcut-btn" onclick="setSendAmount(50)"><img src="robux-icon.png" class="robux-icon" alt="R"> 50</button>
+          <button class="shortcut-btn" onclick="setSendAmount(100)"><img src="robux-icon.png" class="robux-icon" alt="R"> 100</button>
+          <button class="shortcut-btn" onclick="setSendAmount(250)"><img src="robux-icon.png" class="robux-icon" alt="R"> 250</button>
+          <button class="shortcut-btn" onclick="setSendAmount(500)"><img src="robux-icon.png" class="robux-icon" alt="R"> 500</button>
+          <button class="shortcut-btn" onclick="setSendAmount(1000)"><img src="robux-icon.png" class="robux-icon" alt="R"> 1000</button>
+        </div>
+
+        <button class="btn-send-robux" id="btn-submit-send" onclick="confirmSendRobux()">Envoyer les robux</button>
+        <p class="error-msg" id="send-error-msg"></p>
+      </div>
+
+      <!-- ÉTAPE 3 : CONFIRMATION SUCCÈS -->
+      <div id="send-step-3" style="display:none;">
+        <div class="success-checkmark">
+          <i data-lucide="check" style="width:30px; height:30px;"></i>
+        </div>
+        <p id="send-success-message" style="font-size:14px; color:#000; font-weight:600; margin-bottom:15px;"></p>
+        <button class="btn-submit" onclick="closeSendRobuxModal()">Ok</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="btn-nav-home" onclick="switchView('home')"><i data-lucide="home"></i>Accueil</button>
+    <button class="nav-btn"><i data-lucide="bar-chart-2"></i>Charts</button>
+    <button class="nav-btn nav-btn-avatar" id="btn-nav-avatar" onclick="switchView('avatar')">
+      <img src="avatar-principal.jpg" alt="Avatar">
+      <span>Avatar</span>
+    </button>
+    <button class="nav-btn" id="btn-nav-chat" onclick="switchView('chat')"><i data-lucide="message-square"></i>Chat</button>
+    <button class="nav-btn"><i data-lucide="more-horizontal"></i>Plus</button>
+  </nav>
+
+  <script>
+    let userRobux = 2;
+    let selectedPackAmount = 0;
+
+    const friendsData = [
+      { name: 'Jack_Dev', handle: '@azertyuiopqsdfghjkj5', img: 'ami-jack.jpg' },
+      { name: 'yusufleplusbg', handle: '@yusufleplusbg', img: 'ami-yusuf.jpg' },
+      { name: 'gghjiik', handle: '@bambino_550', img: 'ami-gghjiik.jpg' }
+    ];
+
+    let selectedFriendIndex = 0;
+
+    lucide.createIcons();
+
+    function updateRobuxDisplays() {
+      document.querySelectorAll('.robux-balance-display').forEach(el => {
+        el.innerText = userRobux.toLocaleString('fr-FR');
+      });
+    }
+
+    function switchView(viewName) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+      if (viewName === 'home') {
+        document.getElementById('view-home').classList.add('active');
+        document.getElementById('btn-nav-home').classList.add('active');
+      } else if (viewName === 'notifications') {
+        document.getElementById('view-notifications').classList.add('active');
+      } else if (viewName === 'chat') {
+        document.getElementById('view-chat').classList.add('active');
+        document.getElementById('btn-nav-chat').classList.add('active');
+        closeChatDetail();
+      } else if (viewName === 'robux') {
+        document.getElementById('view-robux').classList.add('active');
+      } else if (viewName === 'avatar') {
+        document.getElementById('view-avatar').classList.add('active');
+        document.getElementById('btn-nav-avatar').classList.add('active');
+        init3DScene();
+      }
+      lucide.createIcons();
+    }
+
+    /* GESTION NOTIFICATION ROBUX */
+    function claimNotifRobux() {
+      userRobux += 275000;
+      updateRobuxDisplays();
+      document.getElementById('notif-card-20years').style.display = 'none';
+      alert('275 000 Robux ont bien été ajoutés à ton compte !');
+    }
+
+    function ignoreNotif() {
+      document.getElementById('notif-card-20years').style.display = 'none';
+    }
+
+    /* NAVIGATION CHAT INDIVIDUEL */
+    function openChatDetail(displayName, handle, imgSrc) {
+      document.getElementById('chat-detail-top-name').innerText = displayName;
+      document.getElementById('chat-detail-top-handle').innerText = handle;
+      document.getElementById('chat-detail-top-img').src = imgSrc;
+
+      document.getElementById('chat-detail-card-name').innerText = displayName;
+      document.getElementById('chat-detail-card-handle').innerText = handle;
+      document.getElementById('chat-detail-card-img').src = imgSrc;
+      document.getElementById('chat-detail-card-title').innerText = `Première conversation avec ${displayName}`;
+
+      document.getElementById('chat-list-subview').style.display = 'none';
+      document.getElementById('chat-detail-subview').style.display = 'flex';
+      lucide.createIcons();
+    }
+
+    function closeChatDetail() {
+      document.getElementById('chat-detail-subview').style.display = 'none';
+      document.getElementById('chat-list-subview').style.display = 'block';
+    }
+
+    function openGameModal() { document.getElementById('game-modal').classList.add('active'); }
+    function closeGameModal(e) { document.getElementById('game-modal').classList.remove('active'); }
+
+    /* PAIEMENT ACHAT */
+    function openPayment(amount, packText, price) {
+      selectedPackAmount = amount;
+      document.getElementById('pack-details').innerText = `${packText} pour ${price}`;
+      document.getElementById('payment-modal').classList.add('active');
+      goToStep(1);
+    }
+
+    function selectPaymentOption(element) {
+      document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+      element.classList.add('selected');
+    }
+
+    function goToStep(s) {
+      document.getElementById('modal-step-1').style.display = s === 1 ? 'block' : 'none';
+      document.getElementById('modal-step-2').style.display = s === 2 ? 'block' : 'none';
+      document.getElementById('modal-step-3').style.display = s === 3 ? 'block' : 'none';
+      lucide.createIcons();
+    }
+
+    function confirmPurchase() {
+      if (document.getElementById('age-check').checked) {
+        userRobux += selectedPackAmount;
+        updateRobuxDisplays();
+        document.getElementById('purchase-success-text').innerText = `${selectedPackAmount.toLocaleString('fr-FR')} Robux ont été ajoutés à ton solde !`;
+        goToStep(3);
+      } else {
+        alert("Coche la case d'âge requis.");
+      }
+    }
+
+    function closePayment() { 
+      document.getElementById('payment-modal').classList.remove('active'); 
+      document.getElementById('age-check').checked = false;
+    }
+
+    /* SYSTEME D'ENVOI DE ROBUX */
+    function openSendRobuxModal() {
+      document.getElementById('send-robux-modal').classList.add('active');
+      document.getElementById('send-step-1').style.display = 'block';
+      document.getElementById('send-step-2').style.display = 'none';
+      document.getElementById('send-step-3').style.display = 'none';
+      document.getElementById('search-friend-input').value = '';
+      selectedFriendIndex = 0;
+      filterFriendsList();
+    }
+
+    function closeSendRobuxModal() {
+      document.getElementById('send-robux-modal').classList.remove('active');
+    }
+
+    function filterFriendsList() {
+      const query = document.getElementById('search-friend-input').value.toLowerCase();
+      const listContainer = document.getElementById('friends-select-list');
+      listContainer.innerHTML = '';
+
+      const filtered = friendsData.filter(f => f.name.toLowerCase().includes(query) || f.handle.toLowerCase().includes(query));
+
+      filtered.forEach((friend, idx) => {
+        const originalIndex = friendsData.indexOf(friend);
+        const item = document.createElement('div');
+        item.className = `friend-select-item ${originalIndex === selectedFriendIndex ? 'selected' : ''}`;
+        item.onclick = () => selectFriend(originalIndex);
+
+        item.innerHTML = `
+          <img src="${friend.img}" class="friend-select-avatar" alt="${friend.name}">
+          <div class="friend-select-info">
+            <span class="friend-select-name">${friend.name}</span>
+            <span class="friend-select-handle">${friend.handle}</span>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+    }
+
+    function selectFriend(index) {
+      selectedFriendIndex = index;
+      filterFriendsList();
+    }
+
+    function goToSendStep2() {
+      const friend = friendsData[selectedFriendIndex];
+      document.getElementById('selected-friend-img').src = friend.img;
+      document.getElementById('selected-friend-name').innerText = friend.name;
+      document.getElementById('selected-friend-handle').innerText = friend.handle;
+
+      document.getElementById('send-step-1').style.display = 'none';
+      document.getElementById('send-step-2').style.display = 'block';
+
+      document.getElementById('send-amount-input').value = 0;
+      validateSendAmount();
+    }
+
+    function setSendAmount(val) {
+      document.getElementById('send-amount-input').value = val;
+      validateSendAmount();
+    }
+
+    function validateSendAmount() {
+      const amount = parseInt(document.getElementById('send-amount-input').value) || 0;
+      const btn = document.getElementById('btn-submit-send');
+      const errorMsg = document.getElementById('send-error-msg');
+      const friend = friendsData[selectedFriendIndex];
+
+      if (amount > userRobux) {
+        btn.classList.add('disabled');
+        errorMsg.style.display = 'block';
+        errorMsg.innerText = `Vous n’avez pas suffisamment de robux pour les envoyer à ${friend.handle} !`;
+      } else {
+        btn.classList.remove('disabled');
+        errorMsg.style.display = 'none';
+      }
+    }
+
+    function confirmSendRobux() {
+      const amount = parseInt(document.getElementById('send-amount-input').value) || 0;
+      const friend = friendsData[selectedFriendIndex];
+
+      if (amount <= 0) return;
+
+      if (amount <= userRobux) {
+        userRobux -= amount;
+        updateRobuxDisplays();
+
+        document.getElementById('send-step-2').style.display = 'none';
+        document.getElementById('send-step-3').style.display = 'block';
+        document.getElementById('send-success-message').innerText = `${amount} Robux ont bien été envoyés à ${friend.handle} avec succès !`;
+        lucide.createIcons();
+      }
+    }
+
+    /* STRUCTURE PARTS AVATAR 3D */
+    const avatarPartsData = [
+      { id: 'Head', name: 'Tête classique', category: 'Tête', icon: 'user', active: true },
+      { id: 'Hat', name: 'Casquette', category: 'Accessoires', icon: 'hard-hat', active: true },
+      { id: 'Glasses', name: 'Lunettes', category: 'Accessoires', icon: 'glasses', active: false },
+      { id: 'Torso', name: 'Torse', category: 'Torse', icon: 'shirt', active: true },
+      { id: 'LeftArm', name: 'Bras Gauche', category: 'Torse', icon: 'armchair', active: true },
+      { id: 'RightArm', name: 'Bras Droit', category: 'Torse', icon: 'armchair', active: true }
+    ];
+
+    let avatar3DModel = null;
+
+    function renderPartsGrid(filter = 'all') {
+      const grid = document.getElementById('parts-grid');
+      grid.innerHTML = '';
+
+      const filteredParts = filter === 'all' 
+        ? avatarPartsData 
+        : avatarPartsData.filter(p => p.category === filter);
+
+      filteredParts.forEach(part => {
+        const item = document.createElement('div');
+        item.className = `part-item ${part.active ? 'active' : ''}`;
+        item.onclick = () => togglePart(part.id);
+
+        item.innerHTML = `
+          <div class="part-icon"><i data-lucide="${part.icon}"></i></div>
+          <div class="part-name">${part.name}</div>
+        `;
+        grid.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function filterParts(category, el) {
+      document.querySelectorAll('#avatar-tabs span').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+      renderPartsGrid(category);
+    }
+
+    function togglePart(partId) {
+      const part = avatarPartsData.find(p => p.id === partId);
+      if (!part) return;
+
+      part.active = !part.active;
+
+      if (avatar3DModel) {
+        avatar3DModel.traverse((child) => {
+          if (child.isMesh && child.name.toLowerCase().includes(partId.toLowerCase())) {
+            child.visible = part.active;
+          }
+        });
+      }
+
+      const activeTab = document.querySelector('#avatar-tabs span.active').innerText;
+      const currentCategory = activeTab === 'Tous' ? 'all' : activeTab;
+      renderPartsGrid(currentCategory);
+    }
+
+    /* THREE.JS SCENE */
+    let is3DLoaded = false;
+
+    function init3DScene() {
+      renderPartsGrid('all');
+      if (is3DLoaded) return;
+      
+      const container = document.getElementById('canvas-container');
+      const width = container.clientWidth || window.innerWidth;
+      const height = container.clientHeight || (window.innerHeight * 0.40);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xe0d7ce);
+
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(0, 1, 4.5);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.innerHTML = ''; 
+      container.appendChild(renderer.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(5, 10, 7.5);
+      scene.add(dirLight);
+
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.target.set(0, 1, 0);
+
+      const mtlLoader = new THREE.MTLLoader();
+      mtlLoader.load('avatar.mtl', (materials) => {
+        materials.preload();
+        
+        const objLoader = new THREE.OBJLoader();
+        objLoader.setMaterials(materials);
+        objLoader.load('avatar.obj', (object) => {
+          avatar3DModel = object;
+          
+          const box = new THREE.Box3().setFromObject(object);
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          
+          object.position.x += (object.position.x - center.x);
+          object.position.y += (object.position.y - center.y);
+          object.position.z += (object.position.z - center.z);
+          
+          const maxDim = Math.max(size.x, size.y, size.z);
+          if (maxDim > 0) {
+            const scale = 2.2 / maxDim;
+            object.scale.set(scale, scale, scale);
+          }
+
+          avatarPartsData.forEach(part => {
+            object.traverse((child) => {
+              if (child.isMesh && child.name.toLowerCase().includes(part.id.toLowerCase())) {
+                child.visible = part.active;
+              }
+            });
+          });
+
+          scene.add(object);
+        }, undefined, (error) => {
+          console.error("Erreur de chargement OBJ :", error);
+        });
+      }, undefined, (error) => {
+        console.error("Erreur de chargement MTL :", error);
+      });
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+      is3DLoaded = true;
+    }
+  </script>
+</body>
+</html>
